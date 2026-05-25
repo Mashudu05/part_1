@@ -1,4 +1,4 @@
-1import java.util.*;
+import java.util.*;
 import java.io.*;
 
 public class part_1 {
