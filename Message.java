@@ -1,5 +1,4 @@
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
+
  
 import java.io.FileWriter;
 import java.io.IOException;
@@ -165,55 +164,51 @@ public class Message {
      * is included (see comment below).
      */
     @SuppressWarnings("unchecked")
-    public void storeMessage() {
-        // ── JSON approach (requires json-simple on classpath) ──────────────────
-        try {
-            JSONObject obj = new JSONObject();
-            obj.put("messageID",   messageID);
-            obj.put("messageHash", messageHash);
-            obj.put("recipient",   recipient);
-            obj.put("message",     message);
- 
-            // Read existing array, append, rewrite – simple single-file storage
-            JSONArray arr = new JSONArray();
- 
-            java.io.File file = new java.io.File("messages.json");
-            if (file.exists() && file.length() > 0) {
-                try (java.io.FileReader fr = new java.io.FileReader(file)) {
-                    Object parsed = new org.json.simple.parser.JSONParser().parse(fr);
-                    if (parsed instanceof JSONArray) {
-                        arr = (JSONArray) parsed;
-                    }
-                } catch (Exception ignored) {}
+public void storeMessage() {
+    // NOTE: json-simple library is not available in this project.
+    // Using plain-text JSON fallback that requires no external library.
+    // Each message is written as a JSON-style object to messages.txt.
+
+    java.io.File file = new java.io.File("messages.json");
+
+    // Read existing content
+    StringBuilder existing = new StringBuilder();
+    boolean fileHasContent = false;
+    if (file.exists() && file.length() > 2) {
+        try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                existing.append(line);
             }
- 
-            arr.add(obj);
- 
-            try (FileWriter fw = new FileWriter("messages.json")) {
-                fw.write(arr.toJSONString());
+            // Strip the closing ]
+            int lastBracket = existing.lastIndexOf("]");
+            if (lastBracket >= 0) {
+                existing.deleteCharAt(lastBracket);
             }
- 
-            System.out.println("Message stored to messages.json.");
- 
-        } catch (IOException e) {
-            System.out.println("Error storing message: " + e.getMessage());
+            fileHasContent = true;
+        } catch (java.io.IOException e) {
+            System.out.println("Error reading messages.json: " + e.getMessage());
         }
- 
-        /* ── Plain-text fallback (no external library needed) ────────────────
-         * Uncomment the block below and comment out the JSON block above
-         * if you cannot add json-simple to your NetBeans project.
-         *
-         * try (FileWriter fw = new FileWriter("messages.txt", true)) {
-         *     fw.write("{\"messageID\":\"" + messageID + "\","
-         *            + "\"messageHash\":\"" + messageHash + "\","
-         *            + "\"recipient\":\"" + recipient + "\","
-         *            + "\"message\":\"" + message + "\"}\n");
-         *     System.out.println("Message stored to messages.txt.");
-         * } catch (IOException e) {
-         *     System.out.println("Error storing message: " + e.getMessage());
-         * }
-         * ─────────────────────────────────────────────────────────────────── */
     }
+
+    // Build new JSON entry
+    String entry = "{\"messageID\":\"" + messageID + "\","
+                 + "\"messageHash\":\"" + messageHash + "\","
+                 + "\"recipient\":\"" + recipient + "\","
+                 + "\"message\":\"" + message + "\"}";
+
+    // Write back
+    try (java.io.FileWriter fw = new java.io.FileWriter(file, false)) {
+        if (fileHasContent) {
+            fw.write(existing.toString() + "," + entry + "]");
+        } else {
+            fw.write("[" + entry + "]");
+        }
+        System.out.println("Message stored to messages.json.");
+    } catch (java.io.IOException e) {
+        System.out.println("Error storing message: " + e.getMessage());
+    }
+}
  
     // ─── Getters (used by the runner and tests) ───────────────────────────────
     public String getMessageID()   { return messageID; }
